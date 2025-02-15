@@ -1,223 +1,233 @@
-# league/commonmark
+PHP Parser
+==========
 
-[![Latest Version](https://img.shields.io/packagist/v/league/commonmark.svg?style=flat-square)](https://packagist.org/packages/league/commonmark)
-[![Total Downloads](https://img.shields.io/packagist/dt/league/commonmark.svg?style=flat-square)](https://packagist.org/packages/league/commonmark)
-[![Software License](https://img.shields.io/badge/License-BSD--3-brightgreen.svg?style=flat-square)](LICENSE)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/thephpleague/commonmark/tests.yml?branch=main&style=flat-square)](https://github.com/thephpleague/commonmark/actions?query=workflow%3ATests+branch%3Amain)
-[![Coverage Status](https://img.shields.io/scrutinizer/coverage/g/thephpleague/commonmark.svg?style=flat-square)](https://scrutinizer-ci.com/g/thephpleague/commonmark/code-structure)
-[![Quality Score](https://img.shields.io/scrutinizer/g/thephpleague/commonmark.svg?style=flat-square)](https://scrutinizer-ci.com/g/thephpleague/commonmark)
-[![Psalm Type Coverage](https://shepherd.dev/github/thephpleague/commonmark/coverage.svg)](https://shepherd.dev/github/thephpleague/commonmark)
-[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/126/badge)](https://bestpractices.coreinfrastructure.org/projects/126)
-[![Sponsor development of this project](https://img.shields.io/badge/sponsor%20this%20package-%E2%9D%A4-ff69b4.svg?style=flat-square)](https://www.colinodell.com/sponsor)
+[![Coverage Status](https://coveralls.io/repos/github/nikic/PHP-Parser/badge.svg?branch=master)](https://coveralls.io/github/nikic/PHP-Parser?branch=master)
 
-![league/commonmark](commonmark-banner.png)
+This is a PHP parser written in PHP. Its purpose is to simplify static code analysis and
+manipulation.
 
-**league/commonmark** is a highly-extensible PHP Markdown parser created by [Colin O'Dell][@colinodell] which supports the full [CommonMark] spec and [GitHub-Flavored Markdown].  It is based on the [CommonMark JS reference implementation][commonmark.js] by [John MacFarlane] \([@jgm]\).
+[**Documentation for version 5.x**][doc_master] (current; for running on PHP >= 7.4; for parsing PHP 7.0 to PHP 8.4, with limited support for parsing PHP 5.x).
 
-## 📦 Installation & Basic Usage
+[Documentation for version 4.x][doc_4_x] (supported; for running on PHP >= 7.0; for parsing PHP 5.2 to PHP 8.3).
 
-This project requires PHP 7.4 or higher with the `mbstring` extension.  To install it via [Composer] simply run:
+Features
+--------
 
-``` bash
-$ composer require league/commonmark
-```
+The main features provided by this library are:
 
-The `CommonMarkConverter` class provides a simple wrapper for converting CommonMark to HTML:
+ * Parsing PHP 7, and PHP 8 code into an abstract syntax tree (AST).
+   * Invalid code can be parsed into a partial AST.
+   * The AST contains accurate location information.
+ * Dumping the AST in human-readable form.
+ * Converting an AST back to PHP code.
+   * Formatting can be preserved for partially changed ASTs.
+ * Infrastructure to traverse and modify ASTs.
+ * Resolution of namespaced names.
+ * Evaluation of constant expressions.
+ * Builders to simplify AST construction for code generation.
+ * Converting an AST into JSON and back.
 
-```php
-use League\CommonMark\CommonMarkConverter;
+Quick Start
+-----------
 
-$converter = new CommonMarkConverter([
-    'html_input' => 'strip',
-    'allow_unsafe_links' => false,
-]);
+Install the library using [composer](https://getcomposer.org):
 
-echo $converter->convert('# Hello World!');
+    php composer.phar require nikic/php-parser
 
-// <h1>Hello World!</h1>
-```
-
-Or if you want GitHub-Flavored Markdown, use the `GithubFlavoredMarkdownConverter` class instead:
+Parse some PHP code into an AST and dump the result in human-readable form:
 
 ```php
-use League\CommonMark\GithubFlavoredMarkdownConverter;
+<?php
+use PhpParser\Error;
+use PhpParser\NodeDumper;
+use PhpParser\ParserFactory;
 
-$converter = new GithubFlavoredMarkdownConverter([
-    'html_input' => 'strip',
-    'allow_unsafe_links' => false,
-]);
+$code = <<<'CODE'
+<?php
 
-echo $converter->convert('# Hello World!');
+function test($foo)
+{
+    var_dump($foo);
+}
+CODE;
 
-// <h1>Hello World!</h1>
+$parser = (new ParserFactory())->createForNewestSupportedVersion();
+try {
+    $ast = $parser->parse($code);
+} catch (Error $error) {
+    echo "Parse error: {$error->getMessage()}\n";
+    return;
+}
+
+$dumper = new NodeDumper;
+echo $dumper->dump($ast) . "\n";
 ```
 
-Please note that only UTF-8 and ASCII encodings are supported.  If your Markdown uses a different encoding please convert it to UTF-8 before running it through this library.
+This dumps an AST looking something like this:
 
-> [!CAUTION]
-> If you will be parsing untrusted input from users, please consider setting the `html_input` and `allow_unsafe_links` options per the example above. See <https://commonmark.thephpleague.com/security/> for more details. If you also do choose to allow raw HTML input from untrusted users, consider using a library (like [HTML Purifier](https://github.com/ezyang/htmlpurifier)) to provide additional HTML filtering.
-
-## 📓 Documentation
-
-Full documentation on advanced usage, configuration, and customization can be found at [commonmark.thephpleague.com][docs].
-
-## ⏫ Upgrading
-
-Information on how to upgrade to newer versions of this library can be found at <https://commonmark.thephpleague.com/releases>.
-
-## 💻 GitHub-Flavored Markdown
-
-The `GithubFlavoredMarkdownConverter` shown earlier is a drop-in replacement for the `CommonMarkConverter` which adds additional features found in the GFM spec:
-
- - Autolinks
- - Disallowed raw HTML
- - Strikethrough
- - Tables
- - Task Lists
-
-See the [Extensions documentation](https://commonmark.thephpleague.com/customization/extensions/) for more details on how to include only certain GFM features if you don't want them all.
-
-## 🗃️ Related Packages
-
-### Integrations
-
-- [CakePHP 3](https://github.com/gourmet/common-mark)
-- [Drupal](https://www.drupal.org/project/markdown)
-- [Laravel 4+](https://github.com/GrahamCampbell/Laravel-Markdown)
-- [Sculpin](https://github.com/bcremer/sculpin-commonmark-bundle)
-- [Symfony 2 & 3](https://github.com/webuni/commonmark-bundle)
-- [Symfony 4](https://github.com/avensome/commonmark-bundle)
-- [Twig Markdown extension](https://github.com/twigphp/markdown-extension)
-- [Twig filter and tag](https://github.com/aptoma/twig-markdown)
-- [Laravel CommonMark Blog](https://github.com/spekulatius/laravel-commonmark-blog)
-
-### Included Extensions
-
-See [our extension documentation](https://commonmark.thephpleague.com/extensions/overview) for a full list of extensions bundled with this library.
-
-### Community Extensions
-
-Custom parsers/renderers can be bundled into extensions which extend CommonMark.  Here are some that you may find interesting:
-
- - [Emoji extension](https://github.com/ElGigi/CommonMarkEmoji) - UTF-8 emoji extension with Github tag.
- - [Sup Sub extensions](https://github.com/OWS/commonmark-sup-sub-extensions) - Adds support of superscript and subscript (`<sup>` and `<sub>` HTML tags)
- - [YouTube iframe extension](https://github.com/zoonru/commonmark-ext-youtube-iframe) - Replaces youtube link with iframe.
- - [Lazy Image extension](https://github.com/simonvomeyser/commonmark-ext-lazy-image) - Adds various options for lazy loading of images.
- - [Marker Extension](https://github.com/noah1400/commonmark-marker-extension) - Adds support of highlighted text (`<mark>` HTML tag)
-
-Others can be found on [Packagist under the `commonmark-extension` package type](https://packagist.org/packages/league/commonmark?type=commonmark-extension).
-
-If you build your own, feel free to submit a PR to add it to this list!
-
-### Others
-
-Check out the other cool things people are doing with `league/commonmark`: <https://packagist.org/packages/league/commonmark/dependents>
-
-## 🏷️ Versioning
-
-[SemVer](http://semver.org/) is followed closely. Minor and patch releases should not introduce breaking changes to the codebase; however, they might change the resulting AST or HTML output of parsed Markdown (due to bug fixes, spec changes, etc.)  As a result, you might get slightly different HTML, but any custom code built onto this library should still function correctly.
-
-Any classes or methods marked `@internal` are not intended for use outside of this library and are subject to breaking changes at any time, so please avoid using them.
-
-## 🛠️ Maintenance & Support
-
-When a new **minor** version (e.g. `2.0` -> `2.1`) is released, the previous one (`2.0`) will continue to receive security and critical bug fixes for *at least* 3 months.
-
-When a new **major** version is released (e.g. `1.6` -> `2.0`), the previous one (`1.6`) will receive critical bug fixes for *at least* 3 months and security updates for 6 months after that new release comes out.
-
-(This policy may change in the future and exceptions may be made on a case-by-case basis.)
-
-**Professional support, including notification of new releases and security updates, is available through a [Tidelift Subscription](https://tidelift.com/subscription/pkg/packagist-league-commonmark?utm_source=packagist-league-commonmark&utm_medium=referral&utm_campaign=readme).**
-
-## 👷‍♀️ Contributing
-
-To report a security vulnerability, please use the [Tidelift security contact](https://tidelift.com/security). Tidelift will coordinate the fix and disclosure with us.
-
-If you encounter a bug in the spec, please report it to the [CommonMark] project.  Any resulting fix will eventually be implemented in this project as well.
-
-Contributions to this library are **welcome**, especially ones that:
-
- * Improve usability or flexibility without compromising our ability to adhere to the [CommonMark spec]
- * Mirror fixes made to the [reference implementation][commonmark.js]
- * Optimize performance
- * Fix issues with adhering to the [CommonMark spec]
-
-Major refactoring to core parsing logic should be avoided if possible so that we can easily follow updates made to [the reference implementation][commonmark.js]. That being said, we will absolutely consider changes which don't deviate too far from the reference spec or which are favored by other popular CommonMark implementations.
-
-Please see [CONTRIBUTING](https://github.com/thephpleague/commonmark/blob/main/.github/CONTRIBUTING.md) for additional details.
-
-## 🧪 Testing
-
-``` bash
-$ composer test
+```
+array(
+    0: Stmt_Function(
+        attrGroups: array(
+        )
+        byRef: false
+        name: Identifier(
+            name: test
+        )
+        params: array(
+            0: Param(
+                attrGroups: array(
+                )
+                flags: 0
+                type: null
+                byRef: false
+                variadic: false
+                var: Expr_Variable(
+                    name: foo
+                )
+                default: null
+            )
+        )
+        returnType: null
+        stmts: array(
+            0: Stmt_Expression(
+                expr: Expr_FuncCall(
+                    name: Name(
+                        name: var_dump
+                    )
+                    args: array(
+                        0: Arg(
+                            name: null
+                            value: Expr_Variable(
+                                name: foo
+                            )
+                            byRef: false
+                            unpack: false
+                        )
+                    )
+                )
+            )
+        )
+    )
+)
 ```
 
-This will also test league/commonmark against the latest supported spec.
+Let's traverse the AST and perform some kind of modification. For example, drop all function bodies:
 
-## 🚀 Performance Benchmarks
+```php
+use PhpParser\Node;
+use PhpParser\Node\Stmt\Function_;
+use PhpParser\NodeTraverser;
+use PhpParser\NodeVisitorAbstract;
 
-You can compare the performance of **league/commonmark** to other popular parsers by running the included benchmark tool:
+$traverser = new NodeTraverser();
+$traverser->addVisitor(new class extends NodeVisitorAbstract {
+    public function enterNode(Node $node) {
+        if ($node instanceof Function_) {
+            // Clean out the function body
+            $node->stmts = [];
+        }
+    }
+});
 
-``` bash
-$ ./tests/benchmark/benchmark.php
+$ast = $traverser->traverse($ast);
+echo $dumper->dump($ast) . "\n";
 ```
 
-## 👥 Credits & Acknowledgements
+This gives us an AST where the `Function_::$stmts` are empty:
 
-This code was originally based on the [CommonMark JS reference implementation][commonmark.js] which is written, maintained, and copyrighted by [John MacFarlane].  This project simply wouldn't exist without his work.
+```
+array(
+    0: Stmt_Function(
+        attrGroups: array(
+        )
+        byRef: false
+        name: Identifier(
+            name: test
+        )
+        params: array(
+            0: Param(
+                attrGroups: array(
+                )
+                type: null
+                byRef: false
+                variadic: false
+                var: Expr_Variable(
+                    name: foo
+                )
+                default: null
+            )
+        )
+        returnType: null
+        stmts: array(
+        )
+    )
+)
+```
 
-And a huge thanks to all of our amazing contributors:
+Finally, we can convert the new AST back to PHP code:
 
-<a href="https://github.com/thephpleague/commonmark/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=thephpleague/commonmark" />
-</a>
+```php
+use PhpParser\PrettyPrinter;
 
-### Sponsors
+$prettyPrinter = new PrettyPrinter\Standard;
+echo $prettyPrinter->prettyPrintFile($ast);
+```
 
-We'd also like to extend our sincere thanks the following sponsors who support ongoing development of this project:
+This gives us our original code, minus the `var_dump()` call inside the function:
 
- - [Tidelift](https://tidelift.com/subscription/pkg/packagist-league-commonmark?utm_source=packagist-league-commonmark&utm_medium=referral&utm_campaign=readme) for offering support to both the maintainers and end-users through their [professional support](https://tidelift.com/subscription/pkg/packagist-league-commonmark?utm_source=packagist-league-commonmark&utm_medium=referral&utm_campaign=readme) program
- - [Blackfire](https://www.blackfire.io/) for providing an Open-Source Profiler subscription
- - [JetBrains](https://www.jetbrains.com/) for supporting this project with complimentary [PhpStorm](https://www.jetbrains.com/phpstorm/) licenses
+```php
+<?php
 
-Are you interested in sponsoring development of this project? See <https://www.colinodell.com/sponsor> for a list of ways to contribute.
+function test($foo)
+{
+}
+```
 
-## 📄 License
+For a more comprehensive introduction, see the documentation.
 
-**league/commonmark** is licensed under the BSD-3 license.  See the [`LICENSE`](LICENSE) file for more details.
+Documentation
+-------------
 
-## 🏛️ Governance
+ 1. [Introduction](doc/0_Introduction.markdown)
+ 2. [Usage of basic components](doc/2_Usage_of_basic_components.markdown)
 
-This project is primarily maintained by [Colin O'Dell][@colinodell].  Members of the [PHP League] Leadership Team may occasionally assist with some of these duties.
+Component documentation:
 
-## 🗺️  Who Uses It?
+ * [Walking the AST](doc/component/Walking_the_AST.markdown)
+   * Node visitors
+   * Modifying the AST from a visitor
+   * Short-circuiting traversals
+   * Interleaved visitors
+   * Simple node finding API
+   * Parent and sibling references
+ * [Name resolution](doc/component/Name_resolution.markdown)
+   * Name resolver options
+   * Name resolution context
+ * [Pretty printing](doc/component/Pretty_printing.markdown)
+   * Converting AST back to PHP code
+   * Customizing formatting
+   * Formatting-preserving code transformations
+ * [AST builders](doc/component/AST_builders.markdown)
+   * Fluent builders for AST nodes
+ * [Lexer](doc/component/Lexer.markdown)
+   * Emulation
+   * Tokens, positions and attributes
+ * [Error handling](doc/component/Error_handling.markdown)
+   * Column information for errors
+   * Error recovery (parsing of syntactically incorrect code)
+ * [Constant expression evaluation](doc/component/Constant_expression_evaluation.markdown)
+   * Evaluating constant/property/etc initializers
+   * Handling errors and unsupported expressions
+ * [JSON representation](doc/component/JSON_representation.markdown)
+   * JSON encoding and decoding of ASTs
+ * [Performance](doc/component/Performance.markdown)
+   * Disabling Xdebug
+   * Reusing objects
+   * Garbage collection impact
+ * [Frequently asked questions](doc/component/FAQ.markdown)
+   * Parent and sibling references
 
-This project is used by [Drupal](https://www.drupal.org/project/markdown), [Laravel Framework](https://laravel.com/), [Cachet](https://cachethq.io/), [Firefly III](https://firefly-iii.org/), [Neos](https://www.neos.io/), [Daux.io](https://daux.io/), and [more](https://packagist.org/packages/league/commonmark/dependents)!
-
----
-
-<div align="center">
-	<b>
-		<a href="https://tidelift.com/subscription/pkg/packagist-league-commonmark?utm_source=packagist-league-commonmark&utm_medium=referral&utm_campaign=readme">Get professional support for league/commonmark with a Tidelift subscription</a>
-	</b>
-	<br>
-	<sub>
-		Tidelift helps make open source sustainable for maintainers while giving companies<br>assurances about security, maintenance, and licensing for their dependencies.
-	</sub>
-</div>
-
-[CommonMark]: http://commonmark.org/
-[CommonMark spec]: http://spec.commonmark.org/
-[commonmark.js]: https://github.com/jgm/commonmark.js
-[GitHub-Flavored Markdown]: https://github.github.com/gfm/
-[John MacFarlane]: http://johnmacfarlane.net
-[docs]: https://commonmark.thephpleague.com/
-[docs-examples]: https://commonmark.thephpleague.com/customization/overview/#examples
-[docs-example-twitter]: https://commonmark.thephpleague.com/customization/inline-parsing#example-1---twitter-handles
-[docs-example-smilies]: https://commonmark.thephpleague.com/customization/inline-parsing#example-2---emoticons
-[All Contributors]: https://github.com/thephpleague/commonmark/contributors
-[@colinodell]: https://www.twitter.com/colinodell
-[@jgm]: https://github.com/jgm
-[jgm/stmd]: https://github.com/jgm/stmd
-[Composer]: https://getcomposer.org/
-[PHP League]: https://thephpleague.com
+ [doc_3_x]: https://github.com/nikic/PHP-Parser/tree/3.x/doc
+ [doc_4_x]: https://github.com/nikic/PHP-Parser/tree/4.x/doc
+ [doc_master]: https://github.com/nikic/PHP-Parser/tree/master/doc
